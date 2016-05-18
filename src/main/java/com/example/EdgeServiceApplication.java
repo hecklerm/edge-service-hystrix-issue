@@ -1,6 +1,5 @@
 package com.example;
 
-import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -10,20 +9,24 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.oauth2.client.OAuth2ClientContext;
 import org.springframework.security.oauth2.client.OAuth2RestOperations;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 
 @SpringBootApplication
 @EnableZuulProxy
 @EnableOAuth2Sso
 public class EdgeServiceApplication {
-//    @Bean
-//    @LoadBalanced
-//    RestTemplate restTemplate() {
-//        return new RestTemplate();
-//    }
+    @Bean
+    @LoadBalanced
+    OAuth2RestTemplate restTemplate(OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context) {
+        return new OAuth2RestTemplate(resource, context);
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(EdgeServiceApplication.class, args);
@@ -37,18 +40,18 @@ class QuoteController {
     @LoadBalanced
     OAuth2RestOperations restTemplate;
 
-    @Value("${quote}")
+    @Value("${quote:default}")
     private String defaultQuote;
 
     @LoadBalanced
     @RequestMapping("/quotorama")
-//    @HystrixCommand(fallbackMethod = "getDefaultQuote")
+	@HystrixCommand(fallbackMethod = "getDefaultQuote")
     public String getRandomQuote() {
-        return restTemplate.getForObject("http://quote-service/random", String.class);
+        return this.restTemplate.getForObject("http://quote-service/random", String.class);
     }
 
     public String getDefaultQuote() {
-        return defaultQuote;
+        return this.defaultQuote;
     }
 }
 
@@ -67,23 +70,23 @@ class Quote {
     }
 
     public Long getId() {
-        return id;
+        return this.id;
     }
 
     public String getText() {
-        return text;
+        return this.text;
     }
 
     public String getSource() {
-        return source;
+        return this.source;
     }
 
     @Override
     public String toString() {
         return "Quote{" +
-                "id=" + id +
-                ", text='" + text + '\'' +
-                ", source='" + source + '\'' +
+                "id=" + this.id +
+                ", text='" + this.text + '\'' +
+                ", source='" + this.source + '\'' +
                 '}';
     }
 }
